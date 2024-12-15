@@ -20,9 +20,6 @@ class User(Base):
     # One-to-many relationship with Bid (one user can make many bids)
     bids = relationship("Bids", back_populates="bidder")
 
-    # One-to-many relationship with Auction as the winner
-    won_auctions = relationship("Auction", back_populates="winner")
-
 
 class Auction(Base):
     __tablename__ = "auctions"
@@ -33,15 +30,13 @@ class Auction(Base):
     starting_price = Column(Float, nullable=False)
     end_date = Column(TIMESTAMP(timezone=True), nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    winner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=text('now()'), nullable=False)
 
     # One-to-many relationship with Bid (one auction can have many bids)
     bids = relationship("Bids", back_populates="auction")
 
-    # Many-to-one relationship with User (each auction has one owner and one winner)
+    # Many-to-one relationship with User (each auction has one owner)
     owner = relationship("User", back_populates="auctions", foreign_keys=[owner_id])
-    winner = relationship("User", back_populates="won_auctions", foreign_keys=[winner_id])
 
     # One-to-many relationship with Category (one auction can belong to many categories)
     categories = relationship("Categories", back_populates="auction")
