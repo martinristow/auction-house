@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from app.database import SessionLocal, get_db
 from app import models, schemas
+from app.schemas import user_schemas
 from app import utils
 from typing import List
 router = APIRouter()
@@ -21,8 +22,8 @@ def login(user_credentials: OAuth2PasswordRequestForm = Depends(), db: Session =
     return db_user
 
 
-@router.post('/register', status_code=status.HTTP_201_CREATED, response_model=schemas.UserOutSchema)
-def register_user(user: schemas.UserRegisterSchema, db: Session = Depends(get_db)):
+@router.post('/register', status_code=status.HTTP_201_CREATED, response_model=user_schemas.UserOutSchema)
+def register_user(user: user_schemas.UserRegisterSchema, db: Session = Depends(get_db)):
     hash_password = utils.hash_password(user.password)
     user.password = hash_password
 
@@ -34,7 +35,7 @@ def register_user(user: schemas.UserRegisterSchema, db: Session = Depends(get_db
     return new_user
 
 
-@router.get("/user/{id}", response_model=schemas.UserOutSchema)
+@router.get("/user/{id}", response_model=user_schemas.UserOutSchema)
 def get_user(id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(id == models.User.id).first()
 
@@ -44,7 +45,7 @@ def get_user(id: int, db: Session = Depends(get_db)):
     return user
 
 
-@router.get("/users/all/", response_model=List[schemas.UserOutSchema])
+@router.get("/users/all/", response_model=List[user_schemas.UserOutSchema])
 def get_all_users(db: Session = Depends(get_db)):
     users = db.query(models.User).all()
 
