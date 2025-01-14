@@ -1,24 +1,11 @@
 from fastapi import HTTPException, Depends, APIRouter, status
 from sqlalchemy.orm import Session
-from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from app.backend.database import get_db
-from app.backend import models, utils
+from app.backend import models, utils, oauth2
 from app.backend.schemas import user_schemas
 from typing import List
 router = APIRouter()
 
-
-@router.post("/login")
-def login(user_credentials: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(user_credentials.username == models.User.email).first()
-
-    if not db_user:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials")
-
-    if not utils.verify(user_credentials.password, db_user.password):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials")
-
-    return db_user
 
 
 @router.post('/register', status_code=status.HTTP_201_CREATED, response_model=user_schemas.UserOutSchema)
@@ -35,7 +22,7 @@ def register_user(user: user_schemas.UserRegisterSchema, db: Session = Depends(g
 
 
 @router.get("/user/{id}", response_model=user_schemas.UserOutSchema)
-def get_user(id: int, db: Session = Depends(get_db)):
+def get_user(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     user = db.query(models.User).filter(id == models.User.id).first()
 
     if not user:
@@ -45,7 +32,7 @@ def get_user(id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/users/all/", response_model=List[user_schemas.UserOutSchema])
-def get_all_users(db: Session = Depends(get_db)):
+def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     users = db.query(models.User).all()
 
     if not users:
