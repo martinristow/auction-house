@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 # from app import models
 # from .database import engine
-from app.backend.routes import user, auth, auction
+from app.backend.routes import user, auth, auction, bid
 from fastapi.middleware.cors import CORSMiddleware
 # models.Base.metadata.create_all(bind=engine)
 
@@ -22,6 +22,8 @@ app.add_middleware(
 app.include_router(user.router)
 app.include_router(auth.router)
 app.include_router(auction.router)
+
+app.include_router(bid.router)
 
 
 @app.get("/")
