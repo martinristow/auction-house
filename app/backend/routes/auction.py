@@ -60,3 +60,20 @@ async def delete_auction(id: int, db: Session = Depends(get_db), current_user: i
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Auction not found or you're not the owner!")
 
 
+
+@router.patch("/auctions/{id}", status_code=status.HTTP_200_OK, response_model=auction_schemas.AuctionOut)
+async def update_auction(id: int, update_data: auction_schemas.UpdateAuction, db: Session = Depends(get_db), current_user: int = Depends(get_current_user)):
+
+    auction_query = db.query(models.Auction).filter(id == models.Auction.id, models.Auction.owner_id == models.User.id)
+
+    auction = auction_query.first()
+
+    if auction is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Auction not found or you're not the owner!")
+
+
+
+    auction_query.update(update_data.model_dump(), synchronize_session=False)
+    db.commit()
+
+    return auction_query.first()
