@@ -5,6 +5,7 @@ from app.backend import models
 from ..schemas import bids_schemas
 from typing import List
 from ..oauth2 import get_current_user
+from datetime import datetime, timezone
 router = APIRouter(tags=["Bids"])
 
 
@@ -19,9 +20,15 @@ async def get_bids(id: int, db: Session = Depends(get_db)):
 
 
 
-@router.get("/bids", status_code=status.HTTP_201_CREATED, response_model=bids_schemas.CreateBids)
+@router.post("/bids", status_code=status.HTTP_201_CREATED, response_model=bids_schemas.CreateBids)
 async def create_bids(bid_data: bids_schemas.CreateBids, db: Session = Depends(get_db), current_user: int = Depends(get_current_user)):
 
+    # ja zemame sumata na bidderot sto ja vnel
+    bidder_price = bid_data.amount
+
+    # proverka dali vnesenata suma e pogolema od 0 -> ne dozvoluvame negativni broevi
+    if bidder_price <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The Number must be greater than 0!")
 
     # Proveri dali aukcijata postoi
     id: int = bid_data.auction_id
@@ -43,8 +50,6 @@ async def create_bids(bid_data: bids_schemas.CreateBids, db: Session = Depends(g
         # sumata od auction tabelata ja zgolemuvame za 10 procenti
         price_ten_percent = (auction_starting_price * 0.10) + auction_starting_price
 
-        # ja zemame sumata na bidderot sto ja vnel
-        bidder_price = bid_data.amount
 
         # pravime proverka ako bidderot vnese pomala suma od 10 posto od prethodnata
         if bidder_price < price_ten_percent:
@@ -86,3 +91,23 @@ async def create_bids(bid_data: bids_schemas.CreateBids, db: Session = Depends(g
     db.refresh(new_bid)
 
     return new_bid
+
+
+
+@router.get("/aukcii/{id}")
+async def aukcii(id: int, db: Session = Depends(get_db)):
+    current_time = datetime.now(timezone.utc)
+
+    auction = db.query(models.Auction).filter(id == models.Auction.id).first()
+    end_date = auction.end_date
+
+
+    if current_time > end_date:
+        closed_auction = db.query(models.Auction).filter(id == models.Auction.id,
+                                                         "true" == models.Auction.is_active).first()
+
+        closed_auction.is_active = False
+
+        db.commit()
+        db.refresh(closed_auction)
+
