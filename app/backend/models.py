@@ -31,6 +31,7 @@ class Auction(Base):
     end_date = Column(TIMESTAMP(timezone=True), nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=text('now()'), nullable=False)
+    is_active = Column(Boolean, server_default="true", nullable=False)
 
     # One-to-many relationship with Bid (one auction can have many bids)
     bids = relationship("Bids", back_populates="auction")
