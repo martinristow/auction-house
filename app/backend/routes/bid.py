@@ -6,8 +6,8 @@ from ..schemas import bids_schemas
 from typing import List
 from ..oauth2 import get_current_user
 from datetime import datetime, timezone
-import smtplib
 from app.backend.send_email import email_send
+from sqlalchemy.orm import aliased
 router = APIRouter(tags=["Bids"])
 
 
@@ -103,23 +103,33 @@ async def create_bids(bid_data: bids_schemas.CreateBids, db: Session = Depends(g
 
 
 async def aukcii(db: Session):
-    current_time = datetime.now(timezone.utc)   # momentalnoto vreme
+    current_time = datetime.now(timezone.utc)  # momentalnoto vreme
 
-    auctions = db.query(models.Auction).all()   # site aukcii
+    auctions = db.query(models.Auction).all()  # site aukcii
     for auction in auctions:
 
         end_date = auction.end_date
 
         # proverka dali momentalnoto vreme e pogolemo od end_date na aukcijata
         if current_time > end_date:
-            auction.is_active = False   # ja zatvarame aukcijata dokolku vremeto e pominato
+            auction.is_active = False  # ja zatvarame aukcijata dokolku vremeto e pominato
             auction.end_date = "2090-01-16 18:13:22.292194+01"  # ova e test vrednost koja vo sledniot update ke bide promeneta na podobar nacin
 
-            owner_id = auction.owner_id
-            user_id = db.query(models.User).filter(models.User.id == owner_id).first()  # go pronaogjame user_id za da mozeme da ja izvlecime email adresata na pobednikot
-            user_email = user_id.email
-            print(user_email)
+            # Alias za ponudata -> privremeno ime za tabelata za povrzuvanje na tabeli bez da imame konflikti
+            bid_alias = aliased(models.Bids)
 
+            # posledniot ponuduvac go vadime
+            last_bidder = (
+                db.query(models.User)
+                .join(bid_alias, bid_alias.bidder_id == models.User.id)
+                .filter(bid_alias.auction_id == auction.id)
+                .order_by(bid_alias.id.desc())
+                .first()
+            )
+
+            user_email = last_bidder.email
+
+            print(user_email)
 
             db.commit()
             db.refresh(auction)
@@ -128,7 +138,3 @@ async def aukcii(db: Session):
             await email_send(auction.title, user_email=user_email)
 
             # return user_email
-
-
-
-
