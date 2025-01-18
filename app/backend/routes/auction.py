@@ -4,17 +4,18 @@ from ..database import get_db
 from app.backend import models
 from sqlalchemy.orm import Session
 from ..oauth2 import get_current_user
+from typing import List
 router = APIRouter(tags=["Auctions"])
 
 
-@router.post("/auctions", status_code=status.HTTP_201_CREATED, response_model=auction_schemas.CreateAuction)
-async def create_auction(auction_data: auction_schemas.AuctionOut, db: Session = Depends(get_db), current_user: int = Depends(get_current_user)):
+@router.post("/auctions", status_code=status.HTTP_201_CREATED, response_model=auction_schemas.AuctionOut)
+async def create_auction(auction_data: auction_schemas.CreateAuction, db: Session = Depends(get_db), current_user: int = Depends(get_current_user)):
 
-    is_admin = db.query(models.User).filter(models.User.id == current_user.id, True == models.User.is_admin).first()
+    is_admin = db.query(models.User).filter(models.User.id == current_user.id, models.User.is_admin == True).first()
 
     if is_admin:
 
-        new_auction = models.Auction(**auction_data.model_dump())
+        new_auction = models.Auction(**auction_data.dict())
         new_auction.owner_id = current_user.id
 
         db.add(new_auction)
@@ -28,7 +29,9 @@ async def create_auction(auction_data: auction_schemas.AuctionOut, db: Session =
 
 
 
-@router.get("/auctions-all", status_code=status.HTTP_200_OK, response_model=auction_schemas.AuctionOut)
+
+
+@router.get("/auctions-all", status_code=status.HTTP_200_OK, response_model=List[auction_schemas.AuctionOut])
 async def all_auctions(db: Session = Depends(get_db), current_user: int = Depends(get_current_user)):
 
     auctions = db.query(models.Auction).all()
