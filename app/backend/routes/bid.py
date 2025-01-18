@@ -6,6 +6,7 @@ from ..schemas import bids_schemas
 from typing import List
 from ..oauth2 import get_current_user
 from datetime import datetime, timezone
+import asyncio
 router = APIRouter(tags=["Bids"])
 
 
@@ -23,13 +24,6 @@ async def get_bids(id: int, db: Session = Depends(get_db)):
 @router.post("/bids", status_code=status.HTTP_201_CREATED, response_model=bids_schemas.CreateBids)
 async def create_bids(bid_data: bids_schemas.CreateBids, db: Session = Depends(get_db), current_user: int = Depends(get_current_user)):
 
-    # ja zemame sumata na bidderot sto ja vnel
-    bidder_price = bid_data.amount
-
-    # proverka dali vnesenata suma e pogolema od 0 -> ne dozvoluvame negativni broevi
-    if bidder_price <= 0:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The Number must be greater than 0!")
-
     # Proveri dali aukcijata postoi
     id: int = bid_data.auction_id
     auction = db.query(models.Auction).filter(id == models.Auction.id).first()
@@ -38,6 +32,19 @@ async def create_bids(bid_data: bids_schemas.CreateBids, db: Session = Depends(g
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Auction with id {id} does not exist."
         )
+
+    # proverka dali aukcijata e aktivna
+    if not auction.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This auction is no longer active.")
+
+
+    # ja zemame sumata na bidderot sto ja vnel
+    bidder_price = bid_data.amount
+
+    # proverka dali vnesenata suma e pogolema od 0 -> ne dozvoluvame negativni broevi
+    if bidder_price <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The Number must be greater than 0!")
+
 
     # dali postoe nekakva aukcija vo bids - > ja gledame poslednata dodadena vrednost vo tabelata
     bids = db.query(models.Bids).filter(id == models.Bids.auction_id).order_by(models.Bids.id.desc()).first()
@@ -55,7 +62,7 @@ async def create_bids(bid_data: bids_schemas.CreateBids, db: Session = Depends(g
         if bidder_price < price_ten_percent:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Your bid must be at least {price_ten_percent:.2f}. Current bid is too low.")
 
-        # gi zimame podatocite i kreirame bid
+        # gi zimame podatocite i kreirame bids
         new_bid = models.Bids(**bid_data.model_dump())
         new_bid.bidder_id = current_user.id
 
@@ -94,20 +101,37 @@ async def create_bids(bid_data: bids_schemas.CreateBids, db: Session = Depends(g
 
 
 
-@router.get("/aukcii/{id}")
-async def aukcii(id: int, db: Session = Depends(get_db)):
+async def aukcii(db: Session):
     current_time = datetime.now(timezone.utc)
 
-    auction = db.query(models.Auction).filter(id == models.Auction.id).first()
-    end_date = auction.end_date
+    auctions = db.query(models.Auction).all()
+    for auction in auctions:
+
+        end_date = auction.end_date
+
+        if current_time > end_date:
+            auction.is_active = False
 
 
-    if current_time > end_date:
-        closed_auction = db.query(models.Auction).filter(id == models.Auction.id,
-                                                         "true" == models.Auction.is_active).first()
+            # pobednik = db.query(models.Auction).filter(auction.owner_id == models.User.id).first()
+            #
+            # email_pobednik = pobednik.email
+            # print(email_pobednik)
 
-        closed_auction.is_active = False
+            pobednik = db.query(models.User).join(models.Auction, models.Auction.owner_id == models.User.id).filter(models.Auction.id == auction.id).order_by(models.User.id.desc()).first().email
+            print(pobednik)
 
-        db.commit()
-        db.refresh(closed_auction)
+            db.commit()
+            db.refresh(auction)
 
+
+
+@router.get("/proverka")
+async def proverka(db: Session = Depends(get_db)):
+    auctions = db.query(models.Auction).all()
+    for auction in auctions:
+
+        test = db.query(models.User).join(models.Auction, models.Auction.owner_id == models.User.id).filter(models.Auction.id == auction.id).order_by(models.User.id.desc()).first().email
+        # print(test.email)
+
+        return test
