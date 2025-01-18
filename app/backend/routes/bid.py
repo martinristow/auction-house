@@ -6,7 +6,8 @@ from ..schemas import bids_schemas
 from typing import List
 from ..oauth2 import get_current_user
 from datetime import datetime, timezone
-import asyncio
+import smtplib
+from app.backend.send_email import email_send
 router = APIRouter(tags=["Bids"])
 
 
@@ -102,36 +103,32 @@ async def create_bids(bid_data: bids_schemas.CreateBids, db: Session = Depends(g
 
 
 async def aukcii(db: Session):
-    current_time = datetime.now(timezone.utc)
+    current_time = datetime.now(timezone.utc)   # momentalnoto vreme
 
-    auctions = db.query(models.Auction).all()
+    auctions = db.query(models.Auction).all()   # site aukcii
     for auction in auctions:
 
         end_date = auction.end_date
 
+        # proverka dali momentalnoto vreme e pogolemo od end_date na aukcijata
         if current_time > end_date:
-            auction.is_active = False
+            auction.is_active = False   # ja zatvarame aukcijata dokolku vremeto e pominato
+            auction.end_date = "2090-01-16 18:13:22.292194+01"  # ova e test vrednost koja vo sledniot update ke bide promeneta na podobar nacin
 
+            owner_id = auction.owner_id
+            user_id = db.query(models.User).filter(models.User.id == owner_id).first()  # go pronaogjame user_id za da mozeme da ja izvlecime email adresata na pobednikot
+            user_email = user_id.email
+            print(user_email)
 
-            # pobednik = db.query(models.Auction).filter(auction.owner_id == models.User.id).first()
-            #
-            # email_pobednik = pobednik.email
-            # print(email_pobednik)
-
-            pobednik = db.query(models.User).join(models.Auction, models.Auction.owner_id == models.User.id).filter(models.Auction.id == auction.id).order_by(models.User.id.desc()).first().email
-            print(pobednik)
 
             db.commit()
             db.refresh(auction)
 
+            # povik na email_send funkcija -> logikata ja delam za pogolema citlivost
+            await email_send(auction.title, user_email=user_email)
+
+            # return user_email
 
 
-@router.get("/proverka")
-async def proverka(db: Session = Depends(get_db)):
-    auctions = db.query(models.Auction).all()
-    for auction in auctions:
 
-        test = db.query(models.User).join(models.Auction, models.Auction.owner_id == models.User.id).filter(models.Auction.id == auction.id).order_by(models.User.id.desc()).first().email
-        # print(test.email)
 
-        return test
