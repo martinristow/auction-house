@@ -103,6 +103,7 @@ async def create_bids(bid_data: bids_schemas.CreateBids, db: Session = Depends(g
 
 
 async def aukcii(db: Session):
+    # print("Executing periodic task to check auctions")
     current_time = datetime.now(timezone.utc)  # momentalnoto vreme
 
     auctions = db.query(models.Auction).all()  # site aukcii
