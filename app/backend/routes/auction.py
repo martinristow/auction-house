@@ -5,6 +5,7 @@ from app.backend import models
 from sqlalchemy.orm import Session
 from ..oauth2 import get_current_user
 from typing import List
+from sqlalchemy.orm import aliased
 router = APIRouter(tags=["Auctions"])
 
 
@@ -41,7 +42,10 @@ async def all_auctions(db: Session = Depends(get_db), current_user: int = Depend
 
 @router.get("/auctions/{id}", status_code=status.HTTP_200_OK, response_model=auction_schemas.AuctionOut)
 async def get_auction(id: int, db: Session = Depends(get_db), current_user: int = Depends(get_current_user)):
-    auction = db.query(models.Auction).filter(id == models.Auction.id).first()
+    # auction = db.query(models.Auction).filter(id == models.Auction.id).first()
+    user_aliased = aliased(models.User)
+    auction = db.query(models.Auction).join(user_aliased,
+                                            user_aliased.id == models.Auction.owner_id).filter(id == models.Auction.id).first()
 
     if auction is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Auction with id: {id} is not exist")
