@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-
+from typing import Optional
 
 class UserLoginSchema(BaseModel):
     email: EmailStr
@@ -26,5 +26,5 @@ class UserRegisterSchema(BaseModel):
     username: str
     email: EmailStr
     password: str
-
+    is_admin: Optional[bool] = False  # Default e False ako ne e stiklirano
 
