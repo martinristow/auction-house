@@ -19,3 +19,19 @@ async def email_send(title, user_email):
         connection.sendmail(from_addr=settings.my_email,
                             to_addrs=user_email,
                             msg=message.encode("utf-8"))
+
+
+
+async def contact_email_send(user_email, message_from_user):
+    email_message = (f"Здраво,\n\n"
+                     f"{message_from_user}\n\n"
+                     f"Со почит,\n"
+                     f"{user_email}")
+
+    with smtplib.SMTP("smtp.gmail.com") as connection:
+        connection.starttls()
+        connection.login(settings.my_email, settings.password)
+        message = email_message
+        connection.sendmail(from_addr=user_email,
+                            to_addrs=settings.my_email,
+                            msg=message.encode("utf-8"))
