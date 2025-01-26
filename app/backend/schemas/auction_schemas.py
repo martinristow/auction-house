@@ -7,6 +7,7 @@ class CreateAuction(BaseModel):
     title: str
     description: str
     starting_price: float
+    img: str
     end_date: datetime | None = None
 
 
