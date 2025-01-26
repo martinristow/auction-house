@@ -26,6 +26,7 @@ class AuctionOut(CreateAuction):
     created_at: datetime
     owner_id: int
     is_active: bool
+    img: str
     owner: UserOut
 
     class Config:
