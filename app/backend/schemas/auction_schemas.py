@@ -1,20 +1,6 @@
 from pydantic import BaseModel
-from typing import List, Optional
 from datetime import datetime
-
-
-class Auction(BaseModel):
-    id: int
-    title: str
-    description: str
-    starting_price: float
-    img: str
-    end_date: Optional[datetime]
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        orm_mode = True
+from typing import Optional
 
 
 class CreateAuction(BaseModel):
@@ -25,9 +11,30 @@ class CreateAuction(BaseModel):
     end_date: Optional[datetime] = None
 
 
+
+class UserOut(BaseModel):
+    username: str
+    email: str
+
+    class Config:
+        from_attributes = True
+
+
+
+class AuctionOut(CreateAuction):
+    id: int
+    created_at: datetime
+    owner_id: int
+    is_active: bool
+    img: str
+    owner: UserOut
+
+    class Config:
+        from_attributes = True
+
+
+
 class UpdateAuction(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    starting_price: Optional[float] = None
-    img: Optional[str] = None
-    end_date: Optional[datetime] = None
+    title: str
+    description: str
+    starting_price: float
