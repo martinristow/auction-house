@@ -1,6 +1,6 @@
 .env
 alembic.ini
-alembic
+#alembic
 .gitignore
 misc.xml
 modules.xml
